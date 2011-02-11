@@ -7,8 +7,7 @@
 #include <linux/slab.h>
 
 #define FIRST_MINOR_NUMBER 0
-#define COUNT_OF_CONTIGOUS_DEVICES 1
-#define MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE 100
+#define COUNT_OF_CONTIGOUS_DEVICES 4
 
 /* Device that we will use */
 dev_t helloworld_device;
