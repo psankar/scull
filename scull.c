@@ -7,6 +7,7 @@
 
 #define FIRST_MINOR_NUMBER 0
 #define COUNT_OF_CONTIGOUS_DEVICES 1
+#define MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE 100
 
 /* Device that we will use */
 dev_t helloworld_device;
@@ -14,7 +15,7 @@ dev_t helloworld_device;
 /* cdev structure that we will use to add/remove the device to the kernel */
 struct cdev cdev;
 
-char helloworld_driver_data[100] = "Sankar's Hello World Kernel Driver";
+char helloworld_driver_data[MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE] = "Sankar's Hello World Kernel Driver";
 
 int fpos = 0;
 
@@ -32,6 +33,7 @@ ssize_t helloworld_driver_read(struct file * filep, char *buff, size_t count, lo
 {
 	int device_data_length;
 	device_data_length = strlen(helloworld_driver_data);
+	printk(KERN_INFO "Count is : %d", count);
 
 	/* No more data to read. */
 	if (*offp >= device_data_length)
@@ -58,12 +60,29 @@ ssize_t helloworld_driver_read(struct file * filep, char *buff, size_t count, lo
 
 ssize_t helloworld_driver_write(struct file * filep, const char *buff, size_t count, loff_t * offp)
 {
+	printk(KERN_INFO "Count is : %d", count);
+	/* If the incoming data is more than what we can hold,
+	 * we will take only as much as we can.
+	 */
+	if (count > MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE)
+		count = MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE;
+	
 	/* function to copy user space buffer to kernel space */
 	if (copy_from_user(helloworld_driver_data, buff, count) != 0) {
 		printk(KERN_ALERT "User Space to Kernel Space copy failure");
 		return -EFAULT;
 	}
-	return 0;
+
+	/* Since our device is an array, we need to do this to terminate the string.
+	 * Last character will get overwritten by a \0. Incase of an actual file,
+	 * we will probably update the file size, IIUC.
+	 */
+	helloworld_driver_data [count] = '\0';
+
+	printk(KERN_INFO "written count valuee is : %d", count);
+
+	/* Return the number of bytes actually written. */
+	return count;
 }
 
 /* Extending the file operations to meet our needs */
