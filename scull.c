@@ -4,6 +4,7 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
+#include <linux/slab.h>
 
 #define FIRST_MINOR_NUMBER 0
 #define COUNT_OF_CONTIGOUS_DEVICES 1
@@ -15,7 +16,7 @@ dev_t helloworld_device;
 /* cdev structure that we will use to add/remove the device to the kernel */
 struct cdev cdev;
 
-char helloworld_driver_data[MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE] = "Sankar's Hello World Kernel Driver";
+char *helloworld_driver_data = NULL;
 
 int fpos = 0;
 
@@ -33,7 +34,6 @@ ssize_t helloworld_driver_read(struct file * filep, char *buff, size_t count, lo
 {
 	int device_data_length;
 	device_data_length = strlen(helloworld_driver_data);
-	printk(KERN_INFO "Count is : %d", count);
 
 	/* No more data to read. */
 	if (*offp >= device_data_length)
@@ -60,13 +60,11 @@ ssize_t helloworld_driver_read(struct file * filep, char *buff, size_t count, lo
 
 ssize_t helloworld_driver_write(struct file * filep, const char *buff, size_t count, loff_t * offp)
 {
-	printk(KERN_INFO "Count is : %d", count);
-	/* If the incoming data is more than what we can hold,
-	 * we will take only as much as we can.
-	 */
-	if (count > MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE)
-		count = MAXIMUM_DATA_SIZE_FOR_OUR_DEVICE;
-	
+	if (helloworld_driver_data)
+		kfree(helloworld_driver_data);
+
+	helloworld_driver_data = kmalloc((count * (sizeof(char *))), GFP_KERNEL);
+
 	/* function to copy user space buffer to kernel space */
 	if (copy_from_user(helloworld_driver_data, buff, count) != 0) {
 		printk(KERN_ALERT "User Space to Kernel Space copy failure");
@@ -78,8 +76,6 @@ ssize_t helloworld_driver_write(struct file * filep, const char *buff, size_t co
 	 * we will probably update the file size, IIUC.
 	 */
 	helloworld_driver_data [count] = '\0';
-
-	printk(KERN_INFO "written count valuee is : %d", count);
 
 	/* Return the number of bytes actually written. */
 	return count;
@@ -113,6 +109,11 @@ static int helloworld_driver_init(void)
 		err = cdev_add(&cdev, helloworld_device, COUNT_OF_CONTIGOUS_DEVICES);
 		if (err)
 			printk(KERN_NOTICE "Error [%d] adding HelloWorldDriver", err);
+
+		/* 100 below is an approximation of the number of chars in the initial string */
+		helloworld_driver_data = kmalloc(((100 * sizeof(char *))), GFP_KERNEL);
+		/* the initial string, so that the first cat on our device won't be empty */
+		strcpy(helloworld_driver_data, "Let there be peace and happiness");
 
 	} else
 		printk(KERN_ALERT "HelloWorldDriver could not get a Device number");
