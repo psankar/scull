@@ -30,18 +30,30 @@ int helloworld_driver_release(struct inode *inode, struct file *filep)
 
 ssize_t helloworld_driver_read(struct file * filep, char *buff, size_t count, loff_t * offp)
 {
-	if (fpos > 0)
+	int device_data_length;
+	device_data_length = strlen(helloworld_driver_data);
+
+	/* No more data to read. */
+	if (*offp >= device_data_length)
 		return 0;
 
-	printk(KERN_INFO "buffer is %s", helloworld_driver_data);
+	/* We copy either the full data or the number of bytes
+	 * asked from userspace, depending on whatever is the smallest.
+	 */
+	if ((count + *offp) > device_data_length)
+		count = device_data_length;
+
 	/* function to copy kernel space buffer to user space */
-	if (copy_to_user(buff, helloworld_driver_data, strlen(helloworld_driver_data)) != 0) {
+	if (copy_to_user(buff, helloworld_driver_data, count) != 0) {
 		printk(KERN_ALERT "Kernel Space to User Space copy failure");
 		return -EFAULT;
 	}
-	fpos += strlen(helloworld_driver_data);
 
-	return fpos;
+	/* Increment the offset to the number of bytes read */
+	*offp += count;
+
+	/* Return the number of bytes copied to the user space */
+	return count;
 }
 
 ssize_t helloworld_driver_write(struct file * filep, const char *buff, size_t count, loff_t * offp)
