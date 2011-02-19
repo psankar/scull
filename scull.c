@@ -15,9 +15,8 @@ dev_t helloworld_device;
 /* cdev structure that we will use to add/remove the device to the kernel */
 struct cdev cdev;
 
+/* The core datastructure that will hold the data for our device */
 char *helloworld_driver_data = NULL;
-
-int fpos = 0;
 
 int helloworld_driver_open(struct inode *inode, struct file *filep)
 {
@@ -59,9 +58,11 @@ ssize_t helloworld_driver_read(struct file * filep, char *buff, size_t count, lo
 
 ssize_t helloworld_driver_write(struct file * filep, const char *buff, size_t count, loff_t * offp)
 {
+	/* Free the previouosly stored data */
 	if (helloworld_driver_data)
 		kfree(helloworld_driver_data);
 
+	/* Allocate new memory for holding the new data */
 	helloworld_driver_data = kmalloc((count * (sizeof(char *))), GFP_KERNEL);
 
 	/* function to copy user space buffer to kernel space */
@@ -100,9 +101,7 @@ static int helloworld_driver_init(void)
 	 * driver, you should use different APIs 'register_chrdev_region', 'MKDEV'. But the following is better. */
 	if (!alloc_chrdev_region(&helloworld_device, FIRST_MINOR_NUMBER, COUNT_OF_CONTIGOUS_DEVICES, "HelloWorldDriver")) {
 		printk(KERN_INFO "Device Number successfully allocated.");
-
 		/* If you do a cat /proc/devices you should be able to find our Driver registered. */
-
 		cdev_init(&cdev, &helloworld_driver_fops);
 		cdev.owner = THIS_MODULE;
 		err = cdev_add(&cdev, helloworld_device, COUNT_OF_CONTIGOUS_DEVICES);
