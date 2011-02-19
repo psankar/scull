@@ -1,0 +1,3 @@
+A simple implementation of a character device driver. A character buffer is used to hold data. You can read and write from this buffer. The memory for this buffer is [de]allocated dynamically.
+
+This can be compiled just as any other linux module. The code is a simplified implementation of the concepts explained in the "Character device driver" of the Linux Device Drivers book by Greg KH, Jon Corbett and Rubini. 
